@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import fetch_lfw_people
 from sklearn.model_selection import train_test_split
 
-from tensorflow.keras import Sequential
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
     Input, Conv2D, MaxPooling2D,
-    Flatten, Dense, Rescaling
+    Flatten, Dense
 )
 
 # 1. Load online face dataset
@@ -23,10 +23,18 @@ y = faces.target
 names = faces.target_names
 
 print("Images:", X.shape)
-print("People:", len(names))
+print("Number of People:", len(names))
 
-# 2. Normalize images
-X = X.astype('float32') / 255.0
+# 2. Normalize images correctly
+X = X.astype('float32')
+
+# LFW images are already between 0 and 255
+# Check values before normalization
+if X.max() > 1.0:
+    X = X / 255.0
+
+print("Minimum Pixel:", X.min())
+print("Maximum Pixel:", X.max())
 
 # 3. Split dataset
 X_train, X_test, y_train, y_test = train_test_split(
@@ -47,7 +55,9 @@ model = Sequential([
     MaxPooling2D((2,2)),
 
     Flatten(),
+
     Dense(128, activation='relu'),
+
     Dense(len(names), activation='softmax')
 ])
 
@@ -59,7 +69,7 @@ model.compile(
 )
 
 # 6. Train model
-model.fit(
+history = model.fit(
     X_train, y_train,
     epochs=10,
     batch_size=32,
@@ -69,18 +79,33 @@ model.fit(
 # 7. Evaluate model
 loss, accuracy = model.evaluate(X_test, y_test)
 
-print("Test Accuracy:", accuracy)
+print("\nTest Loss:", loss)
+print("Test Accuracy:", accuracy * 100, "%")
 
 # 8. Predict face
 prediction = model.predict(X_test[:1])
 
 person = np.argmax(prediction[0])
 
-print("Predicted Person:", names[person])
+print("\nPredicted Person:", names[person])
 print("Actual Person:", names[y_test[0]])
 
-# 9. Display face
-plt.imshow(X_test[0])
+# 9. Display original face
+plt.figure(figsize=(5,5))
+
+plt.imshow(np.clip(X_test[0], 0, 1))
+
 plt.title("Predicted: " + names[person])
 plt.axis('off')
+
+plt.show()
+
+# 10. Display accuracy graph
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+
+plt.title("CNN Accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
 plt.show()
