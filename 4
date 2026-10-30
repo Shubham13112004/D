@@ -1,0 +1,55 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense, Input
+
+# Generate time series
+data = np.sin(np.arange(0, 100, 0.1))
+
+# Create sequences
+X, y = [], []
+
+for i in range(len(data) - 10):
+    X.append(data[i:i+10])
+    y.append(data[i+10])
+
+X = np.array(X).reshape(-1, 10, 1)
+y = np.array(y)
+
+# Split data chronologically
+split = int(len(X) * 0.8)
+
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
+
+# Create RNN
+model = Sequential([
+    Input(shape=(10, 1)),
+    SimpleRNN(32, activation='tanh'),
+    Dense(1)
+])
+
+# Compile
+model.compile(optimizer='adam', loss='mse')
+
+# Train
+model.fit(X_train, y_train, epochs=10, batch_size=16)
+
+# Evaluate
+loss = model.evaluate(X_test, y_test)
+print("Test MSE:", loss)
+
+# Predict
+pred = model.predict(X_test)
+
+# Plot
+plt.plot(y_test[:100], label='Actual')
+plt.plot(pred[:100], label='Predicted')
+plt.legend()
+plt.show()
+
+# Forecast next step
+last_sequence = data[-10:].reshape(1, 10, 1)
+next_value = model.predict(last_sequence)
+print("Next predicted value:", next_value[0][0])
