@@ -1,0 +1,86 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import fetch_lfw_people
+from sklearn.model_selection import train_test_split
+
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import (
+    Input, Conv2D, MaxPooling2D,
+    Flatten, Dense, Rescaling
+)
+
+# 1. Load online face dataset
+faces = fetch_lfw_people(
+    min_faces_per_person=20,
+    resize=0.5,
+    color=True
+)
+
+X = faces.images
+y = faces.target
+names = faces.target_names
+
+print("Images:", X.shape)
+print("People:", len(names))
+
+# 2. Normalize images
+X = X.astype('float32') / 255.0
+
+# 3. Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# 4. Create CNN model
+model = Sequential([
+    Input(shape=X.shape[1:]),
+
+    Conv2D(32, (3,3), activation='relu'),
+    MaxPooling2D((2,2)),
+
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D((2,2)),
+
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(len(names), activation='softmax')
+])
+
+# 5. Compile model
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# 6. Train model
+model.fit(
+    X_train, y_train,
+    epochs=10,
+    batch_size=32,
+    validation_split=0.2
+)
+
+# 7. Evaluate model
+loss, accuracy = model.evaluate(X_test, y_test)
+
+print("Test Accuracy:", accuracy)
+
+# 8. Predict face
+prediction = model.predict(X_test[:1])
+
+person = np.argmax(prediction[0])
+
+print("Predicted Person:", names[person])
+print("Actual Person:", names[y_test[0]])
+
+# 9. Display face
+plt.imshow(X_test[0])
+plt.title("Predicted: " + names[person])
+plt.axis('off')
+plt.show()
