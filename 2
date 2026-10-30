@@ -1,0 +1,62 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten, Dense, Reshape
+
+# Load dataset
+(x_train, _), (x_test, _) = \
+    tf.keras.datasets.mnist.load_data()
+
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Add noise
+x_train_noisy = x_train + 0.3 * np.random.randn(*x_train.shape)
+x_test_noisy = x_test + 0.3 * np.random.randn(*x_test.shape)
+
+x_train_noisy = np.clip(x_train_noisy, 0, 1)
+x_test_noisy = np.clip(x_test_noisy, 0, 1)
+
+# Autoencoder
+model = Sequential([
+    Flatten(input_shape=(28, 28)),
+    Dense(128, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(128, activation='relu'),
+    Dense(784, activation='sigmoid'),
+    Reshape((28, 28))
+])
+
+model.compile(optimizer='adam', loss='mse')
+
+# Train
+model.fit(
+    x_train_noisy, x_train,
+    epochs=5,
+    batch_size=128,
+    validation_data=(x_test_noisy, x_test)
+)
+
+# Denoise images
+denoised = model.predict(x_test_noisy[:5])
+
+# Display results
+plt.figure(figsize=(10, 6))
+
+for i in range(5):
+    plt.subplot(3, 5, i + 1)
+    plt.imshow(x_test[i], cmap='gray')
+    plt.axis('off')
+
+    plt.subplot(3, 5, i + 6)
+    plt.imshow(x_test_noisy[i], cmap='gray')
+    plt.axis('off')
+
+    plt.subplot(3, 5, i + 11)
+    plt.imshow(denoised[i], cmap='gray')
+    plt.axis('off')
+
+plt.show()
+
+print("Denoising completed")2
